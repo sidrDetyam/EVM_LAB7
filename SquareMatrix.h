@@ -12,6 +12,8 @@
 #include "AlignedAllocator.h"
 
 
+#define IS_VECTORIZED
+
 
 template<std::size_t Size, typename Alloc = AlignedAllocator<float, 64ull>>
 class SquareMatrix {
@@ -45,6 +47,9 @@ public:
     SquareMatrix inverseMatrix(size_t) const;
 };
 
+
+
+#ifdef IS_VECTORIZED
 
 template<typename T>
 std::remove_const_t<std::remove_reference_t<T>> operator * (T&& m, float s){
@@ -164,6 +169,70 @@ SquareMatrix<Size, Alloc> operator * (const SquareMatrix<Size, Alloc>& a_, const
 
     return res;
 }
+
+#else
+
+template <size_t Size, typename Alloc>
+auto operator * (const SquareMatrix<Size, Alloc>& m, float s){
+
+    SquareMatrix<Size, Alloc> res;
+    auto mem_res = res.data();
+    auto mem_m = m.data();
+    for(size_t i=0; i<Size*Size; ++i){
+        mem_res[i] = mem_m[i] * s;
+    }
+
+    return res;
+}
+
+
+template <size_t Size, typename Alloc>
+auto operator * (const SquareMatrix<Size, Alloc>& a, const SquareMatrix<Size, Alloc>& b){
+
+    SquareMatrix<Size, Alloc> res;
+    auto mem_res = res.data();
+    auto mem_a = a.data();
+    auto mem_b = b.data();
+
+    for (size_t i = 0; i < Size; ++i){
+
+        float * r = mem_res + i * Size;
+        for (int j = 0; j < Size; ++j) {
+            r[j] = 0;
+        }
+
+        for (int k = 0; k < Size; ++k){
+
+            const float * b_ = mem_b + k * Size;
+            float a_ = mem_a[i*Size + k];
+            for (int j = 0; j < Size; ++j) {
+                r[j] += a_ * b_[j];
+            }
+        }
+    }
+
+    return res;
+}
+
+
+template <size_t Size, typename Alloc>
+auto operator + (const SquareMatrix<Size, Alloc>& a, const SquareMatrix<Size, Alloc>& b){
+
+    SquareMatrix<Size, Alloc> res;
+    auto mem_r = res.data();
+    auto mem_a = a.data();
+    auto mem_b = b.data();
+
+    for(size_t i=0; i<Size*Size; ++i){
+        mem_r[i] = mem_a[i] + mem_b[i];
+    }
+
+    return res;
+}
+
+
+#endif
+
 
 
 template<std::size_t Size, typename Alloc>

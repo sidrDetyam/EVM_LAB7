@@ -6,7 +6,7 @@
 #define EVM_LAB7_ALIGNEDALLOCATOR_H
 
 #include <memory>
-
+#include <iostream>
 
 template<typename T, std::size_t Aligment>
 class AlignedAllocator {
